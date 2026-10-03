@@ -1,0 +1,6 @@
+Flask==2.3.3
+pymupdf
+Pillow==10.4.0
+requests
+gunicorn
+supabase

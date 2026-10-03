@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>दैनिक आकर्षण: {{ article.title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            background: #f5f5f5;
+            color: #222;
+            line-height: 1.6;
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            z-index: 100;
+        }
+
+        .app-header img {
+            max-height: 70px;
+            width: auto;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .article-wrapper {
+            max-width: 900px;
+            margin: 25px auto;
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+        }
+
+        .article-title {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #111;
+        }
+
+        .article-meta {
+            font-size: 14px;
+            color: #777;
+            margin-bottom: 15px;
+        }
+
+        .article-image-wrapper {
+            width: 100%;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .article-image-wrapper img {
+            width: 100%;
+            display: block;
+        }
+
+        .app-wrapper {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0 8px;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            padding: 15px;
+        }
+
+        .float-right-button {
+            font-size: 14px;
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+            margin-left: 8px;
+        }
+
+        .float-right-button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .article-title {
+                font-size: 20px;
+            }
+            .float-right-button {
+                font-size: 13px;
+                padding: 5px 10px;
+            }
+        }
+    </style>
+</head>
+<body class="mt-3">
+    <div class="app-wrapper">
+
+    <!-- HEADER -->
+    <div class="app-header">
+        <a href="/"><img src="/static/logo.png" style="max-height: 80px; width:80;"></a>
+        <div class="header-actions">
+            <a href="/about" class="btn btn-info">About</a>
+            <a href="/contact" class="btn btn-info">Contact</a>
+            <a href="/privacy" class="btn btn-info">Privacy</a>
+        </div>
+    </div>
+
+    <!-- ARTICLE -->
+    <div class="article-wrapper">
+        <div class="article-title">
+            {{ article.title }}
+            <button id="downloadBtn" class="float-right-button">⬇ Download</button>
+            <button id="shareBtn" class="float-right-button">↗ Share</button>
+        </div>
+
+        <div class="article-meta">
+            Date: {{ date }} |
+            Article No: {{ article_no }}
+        </div>
+
+        <div class="article-image-wrapper">
+            <img src="/static/logo.png" alt="Loading..." id="loadingImage" style="max-width:100%; display:block; margin:auto;">
+            <img 
+                src="/article-image/{{ date }}/{{ article_no }}" 
+                alt="{{ article.title }}"
+                id="articleImg"
+                style="max-width:100%; display:block; margin:auto;"
+            >
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <p>© {{ date[:4] }} Dainik Aakarshan. All rights reserved.</p>
+    </div>
+
+    </div>
+
+    <script>
+        // ── Shared helper: load an image as HTMLImageElement ──────────────────
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload  = () => resolve(img);
+                img.onerror = () => reject(new Error('Failed to load: ' + src));
+                img.src = src;
+            });
+        }
+
+        // ── Shared helper: build the combined canvas ──────────────────────────
+        async function buildCanvas() {
+            const headerLogo  = document.querySelector('.app-header img');
+            const articleImgEl = document.getElementById('articleImg');
+
+            const [logoImg, articleImg] = await Promise.all([
+                loadImage(headerLogo.src),
+                loadImage(articleImgEl.src)
+            ]);
+
+            const maxWidth  = Math.max(logoImg.naturalWidth, articleImg.naturalWidth);
+            const logoH     = Math.round(logoImg.naturalHeight    * (maxWidth / logoImg.naturalWidth));
+            const articleH  = Math.round(articleImg.naturalHeight * (maxWidth / articleImg.naturalWidth));
+            const padding   = 20;
+            const textHeight = 60;
+
+            const canvas = document.createElement('canvas');
+            canvas.width  = maxWidth;
+            canvas.height = logoH + articleH + padding * 3 + textHeight;
+
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Logo on top
+            ctx.drawImage(logoImg, 0, padding, maxWidth, logoH);
+
+            // Article image below logo
+            const articleY = padding + logoH + padding;
+            ctx.drawImage(articleImg, 0, articleY, maxWidth, articleH);
+
+            // Date text at bottom
+            const textY = articleY + articleH + padding + 30;
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 32px Segoe UI';
+            ctx.textAlign = 'center';
+            ctx.fillText("दैनिक आकर्षण: {{ date }}", canvas.width / 2, textY);
+
+            return canvas;
+        }
+
+        // ── Download button ───────────────────────────────────────────────────
+        document.getElementById('downloadBtn').addEventListener('click', async function () {
+            this.disabled = true;
+            this.textContent = 'Preparing...';
+            try {
+                const canvas   = await buildCanvas();
+                const filename = "{{ date }}_{{ article_no }}.png";
+                const link     = document.createElement('a');
+                link.download  = filename;
+                link.href      = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            } catch (err) {
+                console.error(err);
+                alert('Could not create image. Please try again.');
+            } finally {
+                this.disabled = false;
+                this.textContent = '⬇ Download';
+            }
+        });
+
+        // ── Share button ──────────────────────────────────────────────────────
+        document.getElementById('shareBtn').addEventListener('click', async function () {
+            this.disabled = true;
+            this.textContent = 'Preparing...';
+            try {
+                const canvas = await buildCanvas();
+
+                // Convert canvas → Blob → File
+                canvas.toBlob(async function (blob) {
+                    const file = new File([blob], "dainik_aakarshan_{{ date }}_{{ article_no }}.png", { type: 'image/png' });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        // Native device share sheet (works on Android & iOS)
+                        await navigator.share({
+                            files: [file],
+                            title: 'दैनिक आकर्षण',
+                            text: '{{ article.title }}'
+                        });
+                    } else if (navigator.share) {
+                        // Fallback: share just the URL if file sharing not supported
+                        await navigator.share({
+                            title: 'दैनिक आकर्षण',
+                            text: '{{ article.title }}',
+                            url: window.location.href
+                        });
+                    } else {
+                        alert('Sharing is not supported on this browser. Please use the Download button instead.');
+                    }
+                }, 'image/png');
+
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    // AbortError just means user closed the share sheet — not a real error
+                    console.error(err);
+                    alert('Could not share. Please use the Download button instead.');
+                }
+            } finally {
+                this.disabled = false;
+                this.textContent = '↗ Share';
+            }
+        });
+    </script>
+</body>
+</html>

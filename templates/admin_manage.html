@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Manage Articles – {{ date }}</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f1f1f1;
+}
+
+.wrapper {
+    display: flex;
+    height: 100vh;
+}
+
+/* ================= LEFT VIEWER ================= */
+.viewer {
+    flex: 1;
+    background: #111;
+    overflow: auto;
+    padding: 20px;
+}
+
+#container {
+    position: relative;
+    margin: auto;
+}
+
+#pageImage {
+    width: 100%;
+    max-width: 1200px;
+    height: auto;
+    display: block;
+}
+
+/* Draw rectangle */
+.draw-rect {
+    position: absolute;
+    border: 2px solid red;
+    background: rgba(255,0,0,0.25);
+    pointer-events: auto;
+}
+
+/* Saved rectangles */
+.saved-rect {
+    position: absolute;
+    border: 2px solid #00b050;
+    background: rgba(0,176,80,0.25);
+    pointer-events: none;
+}
+
+/* ================= RIGHT SIDEBAR ================= */
+.sidebar {
+    width: 360px;
+    background: #ffffff;
+    padding: 20px;
+    border-left: 2px solid #ddd;
+    overflow-y: auto;
+}
+
+input, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+button {
+    background: #667eea;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button.secondary { background: #444; }
+button.danger { background: #e53935; }
+
+.article-item {
+    background: #f9f9f9;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border-left: 4px solid #00b050;
+}
+
+.article-item small { color: #555; }
+.article-item a {
+    font-size: 13px;
+    color: #667eea;
+    text-decoration: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+
+<!-- ================= LEFT ================= -->
+<div class="viewer">
+    <div id="container">
+        <img id="pageImage" src="{{ page_image }}">
+        <div id="drawRect" class="draw-rect" style="display:none;"></div>
+    </div>
+</div>
+
+<!-- ================= RIGHT ================= -->
+<div class="sidebar">
+    <h3>Quick Article</h3> 
+
+    <button id="doneBtn">Done</button>
+
+    <button class="secondary" onclick="changePage(-1)">⬅ Previous Page</button>
+    <button class="secondary" onclick="changePage(1)">Next Page ➡</button>
+
+    <form id="articleForm">
+        <input type="hidden" name="date" value="{{ date }}">
+        <input type="hidden" name="page" id="page" value="{{ page }}">
+        <input type="hidden" name="page_image" value="{{ page_image }}">
+
+        <input type="hidden" name="x" id="x">
+        <input type="hidden" name="y" id="y">
+        <input type="hidden" name="w" id="w">
+        <input type="hidden" name="h" id="h">
+
+        <input type="text" name="title" placeholder="Article Title" required>
+        <button type="submit" id="saveBtn">Save Article</button>
+    </form>
+
+    <hr>
+    <h4>Saved Articles</h4>
+    <div id="articleList"></div>
+
+    <p style="margin-top:15px;color:#666;font-size:13px;">
+        • 1st click → start rectangle<br>
+        • 2nd click → finish rectangle<br>
+        • Double-click rectangle → reset
+    </p>
+</div>
+
+</div>
+
+<script>
+/* ================= DONE BUTTON ================= */
+document.getElementById("doneBtn").onclick = () => {
+    fetch("/admin/sync-articles", { method: "POST" })
+        .then(res => {
+            if (res.ok) window.location.href = "/admin";
+            else alert("Backup failed");
+        });
+};
+
+/* ================= VARIABLES ================= */
+const container = document.getElementById("container");
+const rect = document.getElementById("drawRect");
+const img = document.getElementById("pageImage");
+
+const xInput = document.getElementById("x");
+const yInput = document.getElementById("y");
+const wInput = document.getElementById("w");
+const hInput = document.getElementById("h");
+
+const savedArticles = {{ articles | tojson }};
+const currentPage = {{ page }};
+
+let startX = null;
+let startY = null;
+let finished = false;
+
+/* ================= VALIDATION ================= */
+function validateArticle() {
+    if (!xInput.value || !yInput.value || !wInput.value || !hInput.value) {
+        alert("Please select an article area first.");
+        return false;
+    }
+    return true;
+}
+
+/* ================= AJAX SAVE ================= */
+document.getElementById("articleForm").addEventListener("submit", e => {
+    e.preventDefault();
+    if (!validateArticle()) return;
+
+    const formData = new FormData(e.target);
+
+    fetch("/admin/save-article", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.text())
+    .then(() => window.location.reload())
+    .catch(() => alert("Save failed"));
+});
+
+/* ================= DRAW SAVED ================= */
+function drawSavedArticles() {
+    Object.entries(savedArticles).forEach(([no, a], i) => {
+        if (a.page !== currentPage) return;
+
+        const box = document.createElement("div");
+        box.className = "saved-rect";
+        box.style.left = a.x + "%";
+        box.style.top = a.y + "%";
+        box.style.width = a.w + "%";
+        box.style.height = a.h + "%";
+        container.appendChild(box);
+
+        const row = document.createElement("div");
+        row.className = "article-item";
+        row.id = "row-" + no;
+        row.innerHTML = `
+            <strong>${i + 1}. ${a.title}</strong><br>
+            <small>/article/{{ date }}/${no}</small><br>
+            <a href="/article/{{ date }}/${no}" target="_blank">Open</a> |
+            <a href="#" onclick="deleteArticle('${no}')">Delete</a>
+        `;
+        document.getElementById("articleList").appendChild(row);
+    });
+}
+drawSavedArticles();
+
+/* ================= RECT DRAW ================= */
+container.addEventListener("click", e => {
+    if (finished) return;
+
+    const r = img.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+
+    if (startX === null) {
+        startX = x;
+        startY = y;
+        rect.style.display = "block";
+        rect.style.left = x + "px";
+        rect.style.top = y + "px";
+        rect.style.width = "0px";
+        rect.style.height = "0px";
+    } else {
+        rect.style.left = Math.min(startX, x) + "px";
+        rect.style.top = Math.min(startY, y) + "px";
+        rect.style.width = Math.abs(x - startX) + "px";
+        rect.style.height = Math.abs(y - startY) + "px";
+
+        const iw = img.clientWidth;
+        const ih = img.clientHeight;
+
+        xInput.value = (rect.offsetLeft / iw) * 100;
+        yInput.value = (rect.offsetTop / ih) * 100;
+        wInput.value = (rect.offsetWidth / iw) * 100;
+        hInput.value = (rect.offsetHeight / ih) * 100;
+
+        finished = true;
+    }
+});
+
+/* ================= RESET (DOUBLE CLICK FIXED) ================= */
+rect.addEventListener("dblclick", e => {
+    e.stopPropagation();
+    rect.style.display = "none";
+    startX = startY = null;
+    finished = false;
+    xInput.value = yInput.value = wInput.value = hInput.value = "";
+});
+
+/* ================= DELETE ================= */
+function deleteArticle(no) {
+    if (!confirm("Delete this article?")) return;
+
+    fetch(`/admin/delete-article/{{ date }}/${no}`, { method: "POST" })
+        .then(() => {
+            document.getElementById("row-" + no)?.remove();
+            document.querySelectorAll(".saved-rect").forEach(r => r.remove());
+            location.reload();
+        });
+}
+
+/* ================= PAGE ================= */
+function changePage(step) {
+    let p = parseInt(document.getElementById("page").value || "1");
+    p += step;
+    if (p < 1) return;
+    window.location.href = `/admin/manage/{{ date }}?page=` + p;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+
+  <!-- Open Graph Meta Tags (WhatsApp / Facebook Preview) -->
+  <meta property="og:site_name" content="दैनिक आकर्षण">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="mr_IN">
+  <meta property="og:title" content="दैनिक आकर्षण - {{ selected_date }} - Page {{ page_no }}">
+  <meta property="og:description" content="दैनिक आकर्षण ePaper वाचा ऑनलाईन. आजचे मराठी वृत्तपत्र.">
+  <meta property="og:url" content="https://www.dainikaakarshan.com{{ request.path }}{% if request.query_string %}?{{ request.query_string.decode() }}{% endif %}">
+  <meta property="og:image" content="https://www.dainikaakarshan.com{{ share_thumb }}">
+<meta property="og:image:secure_url" content="https://www.dainikaakarshan.com{{ share_thumb }}">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="876">
+  <meta property="og:image:height" content="438">
+  <meta property="og:image:alt" content="दैनिक आकर्षण - {{ selected_date }} - Page {{ page_no }}">
+
+  <title>दैनिक आकर्षण - {{ selected_date }} - Page {{ page_no }}</title>
+
+
+
+  <!-- Basic Meta -->
+  <meta name="description" content="दैनिक आकर्षण ePaper वाचा ऑनलाईन. आजचे मराठी वृत्तपत्र.">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="दैनिक आकर्षण - {{ selected_date }} - Page {{ page_no }}">
+  <meta name="twitter:image" content="https://www.dainikaakarshan.com/static/pages/{{ selected_date }}/thumbs/page_{{ page_no }}.jpg">
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+  >
+
+  <style>
+    /* ================= HEADER ================= */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      z-index: 100;
+    }
+
+    .app-header img {
+      max-height: 70px;
+      width: auto;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Full screen layout */
+    .app-wrapper {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 0 8px;
+    }
+    /* Toolbar */
+    .toolbar {
+      display:flex;
+      gap:10px;
+      white-space:nowrap;
+      overflow-x:auto;
+      padding:10px;
+      background:#f6f6f6;
+      border-radius:10px;
+      justify-content: center;
+    }
+
+    /* Sidebar */
+    .content-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      margin-top: 12px;
+    }
+
+    .thumb-sidebar {
+      position: relative;
+      width: 180px;
+      max-height: 70vh;
+      overflow-y: auto;
+      background: #ffffff;
+      border-right: 1px solid #ddd;
+      padding: 8px;
+      transition: all 0.25s ease;
+      flex: 0 0 180px;
+    }
+
+    .thumb-sidebar.hidden {
+      display: none;
+    }
+
+    .thumb-img {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .thumb-img:hover {
+      transform: scale(1.03);
+      box-shadow: 0 4px 14px rgba(0,0,0,.15);
+    }
+
+    /* Main view */
+    .main-view {
+      overflow-y: auto;
+      position: relative;
+      flex: 1 1 auto;
+      min-width: 0;
+      padding-left: 6px;
+    }
+
+    .main-view.fullwidth {
+      /* when sidebar hidden main simply expands via flex */
+    }
+
+    .main-view img {
+      cursor: zoom-in;
+    }
+
+    /* Navigation Arrows */
+    .nav-arrow {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(37, 99, 235, 0.9);
+      color: white;
+      border: none;
+      width: 100px;
+      height: 150px;
+      font-size: 28px;
+      cursor: pointer;
+      z-index: 999;
+      border-radius: 8px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-arrow:hover {
+      background: rgba(37, 99, 235, 1);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .nav-arrow:disabled {
+      background: rgba(150, 150, 150, 0.5);
+      cursor: not-allowed;
+    }
+
+    .nav-arrow.prev {
+      left: 210px;
+    }
+
+    .nav-arrow.next {
+      right: 10px;
+    }
+
+    /* Fullscreen mode */
+    .fullscreen-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 9999;
+      overflow: hidden;
+    }
+
+    .fullscreen-overlay.active {
+      display: block;
+    }
+
+    .fullscreen-container {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+      cursor: grab;
+    }
+
+    .fullscreen-container.grabbing {
+      cursor: grabbing;
+    }
+
+    .fullscreen-image {
+      position: absolute;
+      max-width: none;
+      transition: transform 0.1s ease-out;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* Zoom controls */
+    .zoom-controls {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px 25px;
+      border-radius: 50px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .zoom-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .zoom-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: scale(1.1);
+    }
+
+    .zoom-level {
+      color: white;
+      font-weight: bold;
+      min-width: 80px;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    .close-fullscreen {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(220, 38, 38, 0.9);
+      color: white;
+      border: none;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      font-size: 28px;
+      cursor: pointer;
+      z-index: 10001;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .close-fullscreen:hover {
+      background: rgba(220, 38, 38, 1);
+      transform: rotate(90deg) scale(1.1);
+    }
+
+    .fullscreen-hint {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      z-index: 10000;
+      animation: fadeOut 3s forwards;
+    }
+
+    @keyframes fadeOut {
+      0%, 70% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* Article overlay styling */
+    .image-container {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .articles-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .article-link {
+      position: absolute;
+      pointer-events: auto;
+      display: block;
+      transition: background-color 0.2s;
+    }
+
+    .article-link:hover {
+      background-color: rgba(37, 99, 235, 0.1);
+      border: 2px solid rgba(37, 99, 235, 0.5);
+      border-radius: 4px;
+    }
+
+    /* Fullscreen article overlay */
+    .fullscreen-articles-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      transform-origin: top left;
+    }
+
+    .fullscreen-articles-overlay .article-link {
+      pointer-events: auto;
+    }
+
+    @media (max-width: 800px) {
+      .main-view {
+        margin-left: 0;
+      }
+
+      .thumb-sidebar {
+        transform: translateX(-180px);
+      }
+
+      .thumb-sidebar.show {
+        transform: translateX(0);
+      }
+
+      .nav-arrow.prev {
+        left: 10px;
+      }
+    }
+
+    /* Toggle button */
+    .sidebar-toggle {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 10px;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+
+    /* Hide arrows in fullscreen */
+    .fullscreen-overlay.active ~ .nav-arrow,
+    .fullscreen-overlay.active ~ .sidebar-toggle {
+      display: none;
+    }
+  </style>
+</head>
+
+<body class="mt-3">
+  <div class="app-wrapper">
+
+  
+  <!-- Logo & Header Buttons -->
+  <div class="app-header">
+    <a href="/"><img src="/static/logo.png" style="max-height: 170px; width:170;"></a>
+
+    <div class="header-actions">
+      <a href="/about" class="btn btn-info">About</a>
+      <a href="/contact" class="btn btn-info">Contact</a>
+      <a href="/privacy" class="btn btn-info">Privacy</a>
+    </div>
+  </div>
+
+
+
+  {% if error_message %}
+    <div class="alert alert-warning mt-3">
+      {{ error_message }}
+    </div>
+  {% endif %}
+
+  <!-- Toolbar -->
+  <div class="toolbar mt-3">
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle" onclick="toggleSidebar()">Page Menu 📰</button>
+
+    <form method="get">
+      <input type="hidden" name="date" value="{{ selected_date }}">
+      <select name="page" class="form-select" onchange="this.form.submit()">
+        {% for i in range(1, total_pages+1) %}
+        <option value="{{ i }}" {% if i == page_no %}selected{% endif %}>
+          Page {{ i }}
+        </option>
+        {% endfor %}
+      </select>
+    </form>
+
+    <form method="get">
+      <input type="date" name="date" value="{{ selected_date }}"
+             class="form-control" onchange="this.form.submit()">
+    </form>
+
+    <a class="btn btn-success">WhatsApp Group</a>
+    <a class="btn btn-primary" href="/download/{{ selected_date }}">Download PDF</a>
+
+  </div>
+
+  {% if not error_message %}
+
+
+
+    <!-- Navigation Arrows -->
+    <button class="nav-arrow prev" onclick="changePage(-1)" {% if page_no <= 1 %}disabled{% endif %}>
+      ‹
+    </button>
+    <button class="nav-arrow next" onclick="changePage(1)" {% if page_no >= total_pages %}disabled{% endif %}>
+      ›
+    </button>
+    <!-- Content row: Sidebar + Main view -->
+    <div class="content-row">
+      <!-- Sidebar -->
+      <div class="thumb-sidebar hidden" id="sidebar">
+        {% if thumbs %}
+            {% for t in thumbs %}
+                <a href="/?date={{ selected_date }}&page={{ loop.index }}">
+                    <img src="{{ t }}" class="thumb-img">
+                </a>
+            {% endfor %}
+        {% endif %}
+      </div>
+
+      <!-- Main view -->
+      <div class="main-view text-center fullwidth" id="main-view">
+        <div class="image-container">
+          <img src="{{ img_path }}" class="img-fluid mb-4" id="main-image" ondblclick="enterFullscreen()">
+          <div class="articles-overlay">
+            {% for a in page_articles %}
+            <a href="/article/{{ selected_date }}/{{ a.article_no }}"
+               class="article-link"
+               style="
+                 left: {{ a.x }}%;
+                 top: {{ a.y }}%;
+                 width: {{ a.w }}%;
+                 height: {{ a.h }}%;
+               ">
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fullscreen Overlay -->
+    <div class="fullscreen-overlay" id="fullscreen-overlay">
+      <button class="close-fullscreen" onclick="exitFullscreen()">×</button>
+      <div class="fullscreen-hint">Double-click or pinch to zoom • Drag to pan</div>
+      
+      <div class="fullscreen-container" id="fullscreen-container">
+        <img src="{{ img_path }}" class="fullscreen-image" id="fullscreen-image">
+        <div class="fullscreen-articles-overlay" id="fullscreen-articles-overlay">
+          {% for a in page_articles %}
+          <a href="/article/{{ selected_date }}/{{ a.article_no }}"
+             class="article-link"
+             style="
+               left: {{ a.x }}%;
+               top: {{ a.y }}%;
+               width: {{ a.w }}%;
+               height: {{ a.h }}%;
+             ">
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomOut()">−</button>
+        <div class="zoom-level" id="zoom-level">100%</div>
+        <button class="zoom-btn" onclick="zoomIn()">+</button>
+        <button class="zoom-btn" onclick="resetZoom()" style="font-size: 18px;">⟲</button>
+      </div>
+    </div>
+
+  {% endif %}
+
+  <script>
+    const currentPage = {{ page_no }};
+    const totalPages = {{ total_pages }};
+    const selectedDate = "{{ selected_date }}";
+
+    // Toggle Sidebar
+    function toggleSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      const main = document.getElementById("main-view");
+
+      sidebar.classList.toggle("hidden");
+      main.classList.toggle("fullwidth");
+    }
+
+    // Change Page
+    function changePage(direction) {
+      const newPage = currentPage + direction;
+      if (newPage >= 1 && newPage <= totalPages) {
+        window.location.href = `/?date=${selectedDate}&page=${newPage}`;
+      }
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowLeft') changePage(-1);
+      if (e.key === 'ArrowRight') changePage(1);
+      if (e.key === 'Escape' && document.getElementById('fullscreen-overlay').classList.contains('active')) {
+        exitFullscreen();
+      }
+    });
+
+    // Fullscreen zoom and pan functionality
+    let scale = 1;
+    let panning = false;
+    let pointX = 0;
+    let pointY = 0;
+    let start = { x: 0, y: 0 };
+
+    const overlay = document.getElementById('fullscreen-overlay');
+    const container = document.getElementById('fullscreen-container');
+    const image = document.getElementById('fullscreen-image');
+    const articlesOverlay = document.getElementById('fullscreen-articles-overlay');
+
+    function enterFullscreen() {
+      overlay.classList.add('active');
+      scale = 1;
+      pointX = 0;
+      pointY = 0;
+      updateTransform();
+      updateZoomLevel();
+      
+      // Center the image initially
+      setTimeout(() => {
+        centerImage();
+      }, 100);
+    }
+
+    function exitFullscreen() {
+      overlay.classList.remove('active');
+      scale = 1;
+      pointX = 0;
+      pointY = 0;
+    }
+
+    function centerImage() {
+      const containerRect = container.getBoundingClientRect();
+      const imageRect = image.getBoundingClientRect();
+      
+      pointX = (containerRect.width - imageRect.width) / 2;
+      pointY = (containerRect.height - imageRect.height) / 2;
+      updateTransform();
+    }
+
+    function zoomIn() {
+      scale = Math.min(scale + 0.25, 5);
+      updateTransform();
+      updateZoomLevel();
+    }
+
+    function zoomOut() {
+      scale = Math.max(scale - 0.25, 0.5);
+      updateTransform();
+      updateZoomLevel();
+    }
+
+    function resetZoom() {
+      scale = 1;
+      centerImage();
+      updateZoomLevel();
+    }
+
+    function updateZoomLevel() {
+      document.getElementById('zoom-level').textContent = Math.round(scale * 100) + '%';
+    }
+
+    function updateTransform() {
+      image.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+      // Apply same transform to articles overlay
+      articlesOverlay.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+    }
+
+    // Mouse events for panning
+    container.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      start = { x: e.clientX - pointX, y: e.clientY - pointY };
+      panning = true;
+      container.classList.add('grabbing');
+    });
+
+    container.addEventListener('mousemove', function(e) {
+      e.preventDefault();
+      if (!panning) return;
+      
+      pointX = e.clientX - start.x;
+      pointY = e.clientY - start.y;
+      updateTransform();
+    });
+
+    container.addEventListener('mouseup', function(e) {
+      panning = false;
+      container.classList.remove('grabbing');
+    });
+
+    container.addEventListener('mouseleave', function(e) {
+      panning = false;
+      container.classList.remove('grabbing');
+    });
+
+    // Touch events for mobile
+    let initialDistance = 0;
+    let initialScale = 1;
+
+    container.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 2) {
+        // Pinch zoom
+        initialDistance = getDistance(e.touches[0], e.touches[1]);
+        initialScale = scale;
+      } else if (e.touches.length === 1) {
+        // Pan
+        start = { 
+          x: e.touches[0].clientX - pointX, 
+          y: e.touches[0].clientY - pointY 
+        };
+        panning = true;
+      }
+    });
+
+    container.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      
+      if (e.touches.length === 2) {
+        // Pinch zoom
+        const currentDistance = getDistance(e.touches[0], e.touches[1]);
+        scale = Math.max(0.5, Math.min(5, initialScale * (currentDistance / initialDistance)));
+        updateTransform();
+        updateZoomLevel();
+      } else if (e.touches.length === 1 && panning) {
+        // Pan
+        pointX = e.touches[0].clientX - start.x;
+        pointY = e.touches[0].clientY - start.y;
+        updateTransform();
+      }
+    });
+
+    container.addEventListener('touchend', function(e) {
+      panning = false;
+      if (e.touches.length === 0) {
+        initialDistance = 0;
+      }
+    });
+
+    // Mouse wheel zoom
+    container.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.max(0.5, Math.min(5, scale + delta));
+      
+      // Zoom towards mouse position
+      const rect = image.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      const scaleChange = newScale / scale;
+      pointX = e.clientX - (mouseX * scaleChange + (e.clientX - mouseX - pointX));
+      pointY = e.clientY - (mouseY * scaleChange + (e.clientY - mouseY - pointY));
+      
+      scale = newScale;
+      updateTransform();
+      updateZoomLevel();
+    });
+
+    // Double click to zoom
+    image.addEventListener('dblclick', function(e) {
+      if (scale === 1) {
+        scale = 2;
+        // Zoom towards click position
+        const rect = image.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        pointX = pointX - clickX;
+        pointY = pointY - clickY;
+      } else {
+        scale = 1;
+        centerImage();
+      }
+      updateTransform();
+      updateZoomLevel();
+    });
+
+    // Helper function to get distance between two touch points
+    function getDistance(touch1, touch2) {
+      const dx = touch1.clientX - touch2.clientX;
+      const dy = touch1.clientY - touch2.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+  </script>
+
+</body>
+</html>
